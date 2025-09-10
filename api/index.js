@@ -98,7 +98,7 @@ export default async function handler(req, res) {
       out = { data: [], message: 'Kosong ngab kek hatiku' };
     } else {
       res.statusCode = 404;
-      out = { error: 'Not found' };
+      out = { error: 'pindah bang ke /api' };
     }
     res.end(JSON.stringify(out, null, 2));
   } catch (e) {
