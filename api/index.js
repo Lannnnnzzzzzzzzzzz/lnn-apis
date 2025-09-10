@@ -1,17 +1,14 @@
+// File server lengkap (sudah fix path & pesan kosong)
 const http = require('http');
 const axios = require('axios');
 const cheerio = require('cheerio');
-
 const BASE = 'https://anichin.cafe';
-const PORT = process.env.PORT || 3007;
-
 const ua = { headers: { 'User-Agent': 'Mozilla/5.0' } };
 
 async function fetchHTML(path) {
   const { data } = await axios.get(BASE + path, ua);
   return cheerio.load(data);
 }
-
 function parseCard($) {
   const res = [];
   $('.bs').each((_, el) => {
@@ -22,29 +19,38 @@ function parseCard($) {
   });
   return res;
 }
-
 function parsePagination($) {
   const last = $('.pagination .page-numbers').not('.next').not('.prev').last().text() || '1';
   return parseInt(last, 10);
 }
 
-const server = http.createServer(async (req, res) => {
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
-  const url = new URL(req.url, http://${req.headers.host});
+  const url = new URL(req.url, https://${req.headers.host});
   const path = url.pathname;
   const query = Object.fromEntries(url.searchParams.entries());
 
   try {
     let out;
-    if (path.startsWith('/api/genre/') && path !== '/api/genrelist') {
-      const name = path.split('/')[3];
+    if (path === '/api') {
+      out = { message: 'Donghua API ready', docs: '/api/home' };
+    } else if (path === '/api/home') {
+      const $ = await fetchHTML('/');
+      out = parseCard($);
+    } else if (path === '/api/ongoing') {
+      const $ = await fetchHTML('/ongoing');
+      out = parseCard($);
+    } else if (path === '/api/completed') {
+      const $ = await fetchHTML('/completed');
+      out = parseCard($);
+    } else if (path === '/api/donghua') {
       const page = Number(query.page) || 1;
-      const $ = await fetchHTML(/genres/${name}/page/${page});
+      const $ = await fetchHTML(/page/${page});
       const data = parseCard($);
       const totalPages = parsePagination($);
       out = { data, page, totalPages };
-    } else if (path.startsWith('/api/donghua/') && path !== '/api/donghua') {
+    } else if (path.startsWith('/api/donghua/')) {
       const slug = path.split('/')[3];
       const $ = await fetchHTML(/donghua/${slug});
       const title = $('h1.entry-title').text().trim();
@@ -56,17 +62,21 @@ const server = http.createServer(async (req, res) => {
         if (num && url) episodes.unshift({ episode: num, url });
       });
       out = { title, slug, poster, episodes };
-    } else if (path === '/api') {
-      out = { message: 'Donghua API ready', docs: '/api/home' };
-    } else if (path === '/api/home') {
-      const $ = await fetchHTML('/');
-      out = parseCard($);
-    } else if (path === '/api/ongoing') {
-      const $ = await fetchHTML('/ongoing');
-      out = parseCard($);
-    } else if (path === '/api/completed') {
-      const $ = await fetchHTML('/completed');
-      out = parseCard($);
+    } else if (path.startsWith('/api/genre/')) {
+      const name = path.split('/')[3];
+      const page = Number(query.page) || 1;
+      const $ = await fetchHTML(/genres/${name}/page/${page});
+      const data = parseCard($);
+      const totalPages = parsePagination($);
+      out = { data, page, totalPages };
+    } else if (path === '/api/search') {
+      const page = Number(query.page) || 1;
+      const keyword = encodeURIComponent(query.q || '');
+      if (!keyword) throw new Error('q required');
+      const $ = await fetchHTML(/page/${page}/?s=${keyword});
+      const data = parseCard($);
+      const totalPages = parsePagination($);
+      out = { data, page, totalPages };
     } else if (path === '/api/schedule') {
       const $ = await fetchHTML('/schedule');
       const days = {};
@@ -82,26 +92,8 @@ const server = http.createServer(async (req, res) => {
         }
       });
       out = days;
-    } else if (path === '/api/genrelist') {
+    } else if (['/api/movie', '/api/batch', '/api/genrelist'].includes(path)) {
       out = { data: [], message: 'Kosong ngab kek hatiku' };
-    } else if (path === '/api/movie') {
-      out = { data: [], message: 'Kosong ngab kek hatiku' };
-    } else if (path === '/api/batch') {
-      out = { data: [], message: 'Kosong ngab kek hatiku' };
-    } else if (path === '/api/donghua') {
-      const page = Number(query.page) || 1;
-      const $ = await fetchHTML(/page/${page});
-      const data = parseCard($);
-      const totalPages = parsePagination($);
-      out = { data, page, totalPages };
-    } else if (path.startsWith('/api/search')) {
-      const page = Number(query.page) || 1;
-      const keyword = encodeURIComponent(query.q || '');
-      if (!keyword) throw new Error('q required');
-      const $ = await fetchHTML(/page/${page}/?s=${keyword});
-      const data = parseCard($);
-      const totalPages = parsePagination($);
-      out = { data, page, totalPages };
     } else {
       res.statusCode = 404;
       out = { error: 'Not found' };
@@ -111,6 +103,4 @@ const server = http.createServer(async (req, res) => {
     res.statusCode = 500;
     res.end(JSON.stringify({ error: e.message }, null, 2));
   }
-});
-
-server.listen(PORT, () => console.log(Donghua API ready on :${PORT}));
+};
