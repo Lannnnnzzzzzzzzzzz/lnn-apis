@@ -78,20 +78,22 @@ export default async function handler(req, res) {
       const totalPages = parsePagination($);
       out = { data, page, totalPages };
     } else if (path === '/api/schedule') {
-      const $ = await fetchHTML('/schedule');
-      const days = {};
-      let curDay = null;
-      $('h3, a[href*="/episode"]').each((_, el) => {
-        if (el.name === 'h3') {
-          curDay = $(el).text().trim();
-          days[curDay] = [];
-        } else if (curDay && el.name === 'a') {
-          const txt = $(el).text().split(' – ')[0].trim();
-          const slug = $(el).attr('href')?.split('/').filter(Boolean).pop() || '';
-          if (txt && slug) days[curDay].push({ title: txt, slug });
-        }
-      });
-      out = days;
+  const $ = await fetchHTML('/schedule');
+  const days = {};
+  /* ---------- selector baru ---------- */
+  $('.kg').each((_, kg) => {
+    const day = $(kg).find('h3').first().text().trim();
+    if (!day) return;
+    const list = [];
+    $(kg).find('a[href*="/episode"]').each((_, a) => {
+      const txt = $(a).text().split(' – ')[0].trim();
+      const slug = $(a).attr('href')?.split('/').filter(Boolean).pop() || '';
+      if (txt && slug) list.push({ title: txt, slug });
+    });
+    if (list.length) days[day] = list;
+  });
+  out = days;
+}
     } else if (['/api/movie', '/api/batch', '/api/genrelist'].includes(path)) {
       out = { data: [], message: 'Kosong ngab kek hatiku' };
     } else {
