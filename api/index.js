@@ -1,34 +1,3 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-const BASE    = 'https://anichin.cafe';
-
-const ua = {headers:{'User-Agent':'Mozilla/5.0'}};
-
-async function fetchHTML(path){
-  const url = BASE + path;
-  const {data} = await axios.get(url, ua);
-  return cheerio.load(data);
-}
-
-function parseCard($){
-  const res = [];
-  $('.bs').each((_,el)=>{
-    const title = $(el).find('.tt').text().trim();
-    const slug  = $(el).find('a').attr('href')?.split('/').filter(Boolean).pop() || '';
-    const poster= $(el).find('img').attr('src') || '';
-    const score = $(el).find('.sb').text().trim();
-    const ep    = $(el).find('.epx').text().replace('Episode','').trim();
-    if(title) res.push({title, slug, poster, score, episode:ep});
-  });
-  return res;
-}
-
-function parsePagination($){
-  const total = $('.pagination .page-numbers').not('.next').not('.prev').last().text() || '1';
-  return parseInt(total,10);
-}
-
-export { fetchHTML, parseCard, parsePagination };
 /* ---------- Vercel Serverless – 1 file, fix path & pesan kekinian ---------- */
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -109,27 +78,25 @@ export default async function handler(req, res) {
       const totalPages = parsePagination($);
       out = { data, page, totalPages };
     } else if (path === '/api/schedule') {
-  const $ = await fetchHTML('/schedule');
-  const days = {};
-  /* ---------- selector baru ---------- */
-  $('.kg').each((_, kg) => {
-    const day = $(kg).find('h3').first().text().trim();
-    if (!day) return;
-    const list = [];
-    $(kg).find('a[href*="/episode"]').each((_, a) => {
-      const txt = $(a).text().split(' – ')[0].trim();
-      const slug = $(a).attr('href')?.split('/').filter(Boolean).pop() || '';
-      if (txt && slug) list.push({ title: txt, slug });
-    });
-    if (list.length) days[day] = list;
-  });
-  out = days;
-}
+      const $ = await fetchHTML('/schedule');
+      const days = {};
+      let curDay = null;
+      $('h3, a[href*="/episode"]').each((_, el) => {
+        if (el.name === 'h3') {
+          curDay = $(el).text().trim();
+          days[curDay] = [];
+        } else if (curDay && el.name === 'a') {
+          const txt = $(el).text().split(' – ')[0].trim();
+          const slug = $(el).attr('href')?.split('/').filter(Boolean).pop() || '';
+          if (txt && slug) days[curDay].push({ title: txt, slug });
+        }
+      });
+      out = days;
     } else if (['/api/movie', '/api/batch', '/api/genrelist'].includes(path)) {
       out = { data: [], message: 'Kosong ngab kek hatiku' };
     } else {
       res.statusCode = 404;
-      out = { error: 'pindah bang ke /api' };
+      out = { error: 'Not found' };
     }
     res.end(JSON.stringify(out, null, 2));
   } catch (e) {
