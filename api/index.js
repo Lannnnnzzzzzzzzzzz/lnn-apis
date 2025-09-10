@@ -1,10 +1,9 @@
-// File server lengkap (sudah fix path & pesan kosong)
-const http = require('http');
+/* ---------- Vercel Serverless – 1 file, fix path & pesan kekinian ---------- */
 const axios = require('axios');
 const cheerio = require('cheerio');
 const BASE = 'https://anichin.cafe';
-const ua = { headers: { 'User-Agent': 'Mozilla/5.0' } };
 
+const ua = { headers: { 'User-Agent': 'Mozilla/5.0' } };
 async function fetchHTML(path) {
   const { data } = await axios.get(BASE + path, ua);
   return cheerio.load(data);
@@ -27,12 +26,13 @@ function parsePagination($) {
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
-  const url = new URL(req.url, 'https://${req.headers.host}');
+  const url = new URL(req.url, https://${req.headers.host});
   const path = url.pathname;
   const query = Object.fromEntries(url.searchParams.entries());
 
   try {
     let out;
+    /* ---------- route map ---------- */
     if (path === '/api') {
       out = { message: 'Donghua API ready', docs: '/api/home' };
     } else if (path === '/api/home') {
