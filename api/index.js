@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
 
-  const url = new URL(req.url, http://${req.headers.host});
+  const url = new URL(req.url, 'http://${req.headers.host'});
   const path = url.pathname;
   const query = Object.fromEntries(url.searchParams.entries());
 
