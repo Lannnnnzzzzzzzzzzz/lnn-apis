@@ -1,6 +1,6 @@
 /* ---------- Vercel Serverless – 1 file, fix path & pesan kekinian ---------- */
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 const BASE = 'https://anichin.cafe';
 
 const ua = { headers: { 'User-Agent': 'Mozilla/5.0' } };
@@ -23,10 +23,10 @@ function parsePagination($) {
   return parseInt(last, 10);
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
-  const url = new URL(req.url, https://${req.headers.host});
+  const url = new URL(req.url, `https://${req.headers.host}`);
   const path = url.pathname;
   const query = Object.fromEntries(url.searchParams.entries());
 
@@ -46,13 +46,13 @@ module.exports = async (req, res) => {
       out = parseCard($);
     } else if (path === '/api/donghua') {
       const page = Number(query.page) || 1;
-      const $ = await fetchHTML(/page/${page});
+      const $ = await fetchHTML(`/page/${page}`);
       const data = parseCard($);
       const totalPages = parsePagination($);
       out = { data, page, totalPages };
     } else if (path.startsWith('/api/donghua/')) {
       const slug = path.split('/')[3];
-      const $ = await fetchHTML(/donghua/${slug});
+      const $ = await fetchHTML(`/donghua/${slug}`);
       const title = $('h1.entry-title').text().trim();
       const poster = $('.thumb img').attr('src') || '';
       const episodes = [];
@@ -65,7 +65,7 @@ module.exports = async (req, res) => {
     } else if (path.startsWith('/api/genre/')) {
       const name = path.split('/')[3];
       const page = Number(query.page) || 1;
-      const $ = await fetchHTML(/genres/${name}/page/${page});
+      const $ = await fetchHTML(`/genres/${name}/page/${page}`);
       const data = parseCard($);
       const totalPages = parsePagination($);
       out = { data, page, totalPages };
@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
       const page = Number(query.page) || 1;
       const keyword = encodeURIComponent(query.q || '');
       if (!keyword) throw new Error('q required');
-      const $ = await fetchHTML(/page/${page}/?s=${keyword});
+      const $ = await fetchHTML(`/page/${page}/?s=${keyword}`);
       const data = parseCard($);
       const totalPages = parsePagination($);
       out = { data, page, totalPages };
@@ -103,4 +103,4 @@ module.exports = async (req, res) => {
     res.statusCode = 500;
     res.end(JSON.stringify({ error: e.message }, null, 2));
   }
-};
+}
