@@ -1,82 +1,109 @@
 /* ---------- Vercel Serverless – 1 file, fix path & pesan kekinian ---------- */
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-const BASE = 'https://anichin.cafe';
 
-const ua = { headers: { 'User-Agent': 'Mozilla/5.0' } };
+const BASE = 'https://anichin.cafe';
+const ua   = { headers: { 'User-Agent': 'Mozilla/5.0' } };
+
 async function fetchHTML(path) {
   const { data } = await axios.get(BASE + path, ua);
   return cheerio.load(data);
 }
+
 function parseCard($) {
   const res = [];
   $('.bs').each((_, el) => {
-    const title = $(el).find('.tt').text().trim();
-    const slug = $(el).find('a').attr('href')?.split('/').filter(Boolean).pop() || '';
+    const title  = $(el).find('.tt').text().trim();
+    const slug   = $(el).find('a').attr('href')?.split('/').filter(Boolean).pop() || '';
     const poster = $(el).find('img').attr('src') || '';
     if (title) res.push({ title, slug, poster });
   });
   return res;
 }
+
 function parsePagination($) {
   const last = $('.pagination .page-numbers').not('.next').not('.prev').last().text() || '1';
   return parseInt(last, 10);
 }
 
+/* ---------- helper: kekinian wrap ---------- */
+const wrap = (payload) => ({
+  success : true,
+  ts      : new Date().toISOString(),
+  data    : payload
+});
+
 export default async function handler(req, res) {
+  /* ---------- CORS pre-flight ---------- */
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.statusCode = 200;
+    res.end();
+    return;
+  }
+
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
-  const url = new URL(req.url, `https://${req.headers.host}`);
+
+  const url  = new URL(req.url, https://${req.headers.host});
   const path = url.pathname;
   const query = Object.fromEntries(url.searchParams.entries());
 
   try {
     let out;
-    /* ---------- route map ---------- */
+
     if (path === '/api') {
       out = { message: 'Donghua API ready', docs: '/api/home' };
     } else if (path === '/api/home') {
-      const $ = await fetchHTML('/');
-      out = parseCard($);
+      out = wrap(parseCard(await fetchHTML('/')));
     } else if (path === '/api/ongoing') {
-      const $ = await fetchHTML('/ongoing');
-      out = parseCard($);
+      out = wrap(parseCard(await fetchHTML('/ongoing')));
     } else if (path === '/api/completed') {
-      const $ = await fetchHTML('/completed');
-      out = parseCard($);
+      out = wrap(parseCard(await fetchHTML('/completed')));
     } else if (path === '/api/donghua') {
       const page = Number(query.page) || 1;
-      const $ = await fetchHTML(`/page/${page}`);
-      const data = parseCard($);
-      const totalPages = parsePagination($);
-      out = { data, page, totalPages };
+      const $ = await fetchHTML(/page/${page});
+      out = wrap({
+        list      : parseCard($),
+        page,
+        totalPages: parsePagination($)
+      });
     } else if (path.startsWith('/api/donghua/')) {
       const slug = path.split('/')[3];
-      const $ = await fetchHTML(`/donghua/${slug}`);
-      const title = $('h1.entry-title').text().trim();
-      const poster = $('.thumb img').attr('src') || '';
+      const $ = await fetchHTML(/donghua/${slug});
       const episodes = [];
       $('.eplister li').each((_, el) => {
         const num = $(el).find('.epl-num').text().trim();
         const url = $(el).find('a').attr('href');
         if (num && url) episodes.unshift({ episode: num, url });
       });
-      out = { title, slug, poster, episodes };
+      out = wrap({
+        title : $('h1.entry-title').text().trim(),
+        slug,
+        poster: $('.thumb img').attr('src') || '',
+        episodes
+      });
     } else if (path.startsWith('/api/genre/')) {
       const name = path.split('/')[3];
       const page = Number(query.page) || 1;
-      const $ = await fetchHTML(`/genres/${name}/page/${page}`);
-      const data = parseCard($);
-      const totalPages = parsePagination($);
-      out = { data, page, totalPages };
+      const $ = await fetchHTML(/genres/${name}/page/${page});
+      out = wrap({
+        list      : parseCard($),
+        page,
+        totalPages: parsePagination($)
+      });
     } else if (path === '/api/search') {
       const page = Number(query.page) || 1;
       const keyword = encodeURIComponent(query.q || '');
       if (!keyword) throw new Error('q required');
-      const $ = await fetchHTML(`/page/${page}/?s=${keyword}`);
-      const data = parseCard($);
-      const totalPages = parsePagination($);
-      out = { data, page, totalPages };
+      const $ = await fetchHTML(/page/${page}/?s=${keyword});
+      out = wrap({
+        list      : parseCard($),
+        page,
+        totalPages: parsePagination($)
+      });
     } else if (path === '/api/schedule') {
       const $ = await fetchHTML('/schedule');
       const days = {};
@@ -86,18 +113,19 @@ export default async function handler(req, res) {
           curDay = $(el).text().trim();
           days[curDay] = [];
         } else if (curDay && el.name === 'a') {
-          const txt = $(el).text().split(' – ')[0].trim();
+          const txt  = $(el).text().split(' – ')[0].trim();
           const slug = $(el).attr('href')?.split('/').filter(Boolean).pop() || '';
           if (txt && slug) days[curDay].push({ title: txt, slug });
         }
       });
-      out = days;
+      out = wrap(days);
     } else if (['/api/movie', '/api/batch', '/api/genrelist'].includes(path)) {
-      out = { data: [], message: 'Kosong ngab kek hatiku' };
+      out = wrap({ message: 'Kosong ngab kek hatiku' });
     } else {
       res.statusCode = 404;
       out = { error: 'Not found' };
     }
+
     res.end(JSON.stringify(out, null, 2));
   } catch (e) {
     res.statusCode = 500;
