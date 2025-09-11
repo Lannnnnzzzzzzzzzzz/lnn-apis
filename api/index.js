@@ -26,26 +26,13 @@ function parsePagination($) {
   return parseInt(last, 10);
 }
 
-/* ---------- helper: kekinian wrap ---------- */
-const wrap = (payload) => ({
-  success : true,
-  ts      : new Date().toISOString(),
-  data    : payload
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://illustrious-lollipop-613a93.netlify.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // Or specific methods
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type'); // Or specific headers
+  next();
 });
 
-export default async function handler(req, res) {
-  /* ---------- CORS pre-flight ---------- */
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.statusCode = 200;
-    res.end();
-    return;
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/json');
 
   const url  = new URL(req.url, https://${req.headers.host});
   const path = url.pathname;
