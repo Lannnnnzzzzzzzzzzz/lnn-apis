@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   // --- Fix CORS ---
   res.setHeader(
     "Access-Control-Allow-Origin",
-    "https://illustrious-lollipop-613a93.netlify.app"
+    "https://donghua-streaming.vercel.app/"
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
